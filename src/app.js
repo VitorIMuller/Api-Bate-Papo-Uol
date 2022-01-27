@@ -37,6 +37,41 @@ app.get('/participants', async (req, res) => {
         mongoClient.close();
     }
 
+});
+
+app.get('/messages', async (req, res)=>{
+    const limit = parseInt(req.query.limit);
+    
+
+    if(!limit){
+        try{
+            await mongoClient.connect();
+            const dbMessages = mongoClient.db("apiuol");
+            const messagesCollection = dbMessages.collection("messages")
+            const messages = messagesCollection.find({}).toArray();
+            res.send(messages)
+
+        }catch(error){
+
+        }
+        
+    }else{
+        try{
+            await mongoClient.connect();
+            const dbMessages = mongoClient.db("apiuol");
+            const messagesCollection = dbMessages.collection("messages")
+            const messages = messagesCollection.find({}).toArray();
+            
+            
+            // const messagesFiltradas = [...messages].reverse().slice(0, limit)
+            res.send(messages)
+
+        }catch(error){
+
+        }
+    }
+
+
 })
 
 app.post('/participants', async (req, res)=>{
