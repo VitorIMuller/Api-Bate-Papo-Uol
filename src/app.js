@@ -1,10 +1,11 @@
 import express, {json} from 'express';
 import cors from 'cors';
 import {MongoClient} from 'mongodb';
+import dotenv from 'dotenv';
+dotenv.config();
 
 
 const app = express();
-
 app.use(cors());
 app.use(express.json());
 
@@ -13,8 +14,7 @@ app.listen(5000, ()=>{
 });
 
 let db;
-
-const mongoClient = new MongoClient('mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=apiuol');
+const mongoClient = new MongoClient(process.env.MONGO_URI);
 mongoClient.connect().then(()=>{
     db = mongoClient.db('apiuol')
 })
@@ -78,16 +78,17 @@ app.post('/participants', async (req, res)=>{
 
     console.log(req.body.name)
 
-    if(req.body.name.length === 0){
+    if(!req.body.name){
         res.status(422).send('O campo usuario nao pode ser vazio')
     }else{
         try {
+            
             await mongoClient.connect();
             const dbParticipants = mongoClient.db("apiuol");
             const participantsCollection = dbParticipants.collection("participants")
-            const participants = participantsCollection.insertOne(req.body);
-    
-            res.send(participants);
+            const participants = participantsCollection.insertOne({ name: req.body, lastStatus: Date.now()});
+
+            res.sendStatus(201);
 
         } catch (error) {
             
