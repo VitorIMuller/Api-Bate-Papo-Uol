@@ -25,7 +25,7 @@ app.get('/participants', async (req, res) => {
 
     try {
         await mongoClient.connect();
-        const dbParticipants = mongoClient.db("allParticipants");
+        const dbParticipants = mongoClient.db("apiuol");
         const participantsCollection = dbParticipants.collection("participants")
         const participants = await participantsCollection.find({}).toArray();
         
@@ -37,7 +37,26 @@ app.get('/participants', async (req, res) => {
         mongoClient.close();
     }
 
-
 })
 
+app.post('/participants', async (req, res)=>{
+
+    console.log(req.body.name)
+
+    if(req.body.name.length === 0){
+        res.status(422).send('O campo usuario nao pode ser vazio')
+    }else{
+        try {
+            await mongoClient.connect();
+            const dbParticipants = mongoClient.db("apiuol");
+            const participantsCollection = dbParticipants.collection("participants")
+            const participants = participantsCollection.insertOne(req.body);
+    
+            res.send(participants);
+
+        } catch (error) {
+            
+        }
+    }
+})
 
