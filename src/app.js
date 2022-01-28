@@ -3,6 +3,7 @@ import cors from 'cors';
 import {MongoClient} from 'mongodb';
 import dotenv from 'dotenv';
 import joi from 'joi';
+import dayjs from 'dayjs';
 dotenv.config();
 
 
@@ -22,6 +23,11 @@ mongoClient.connect().then(()=>{
 
 const userModel = joi.object({
     name: joi.string().required(),
+})
+const messageModel = joi.object({
+    to: joi.string().required(),
+    text: joi.string().required(),
+    type: joi.valid("message", "private_message").required()
 })
 
 
@@ -45,64 +51,102 @@ app.get('/participants', async (req, res) => {
 });
 
 app.get('/messages', async (req, res)=>{
-    const limit = parseInt(req.query.limit);
+    const limit = req.query.limit;
+    const user  = req.headers.user;
     
-
-    if(!limit){
-        try{
-            await mongoClient.connect();
-            const dbMessages = mongoClient.db("apiuol");
-            const messagesCollection = dbMessages.collection("messages")
-            const messages = messagesCollection.find({}).toArray();
-            res.send(messages)
-
-        }catch(error){
-
-        }
+    
+    try{
+        await mongoClient.connect();
+        const dbMessages = mongoClient.db("apiuol");
+        const messagesCollection = dbMessages.collection("messages")
+        const messages = await messagesCollection.find({}).toArray();
         
-    }else{
-        try{
-            await mongoClient.connect();
-            const dbMessages = mongoClient.db("apiuol");
-            const messagesCollection = dbMessages.collection("messages")
-            const messages = messagesCollection.find({}).toArray();
-            
-            
-            // const messagesFiltradas = [...messages].reverse().slice(0, limit)
-            res.send(messages)
-
-        }catch(error){
-
+        const filteredMessages = messages.filter((m)=> {
+            (m.type === "message" || m.type === "status"|| m.to === "Todos" || m.to === user || m.from === user);
+        });
+    
+        if(!limit){
+            res.send(filteredMessages)
+        }else{
+            res.send(filteredMessages.filter(- limit))
         }
-    }
+            
+        }catch(error){
+            res.status(500).send(error)
+        }
+        mongoClient.close();
+    
 
 
 })
 
 app.post('/participants', async (req, res)=>{
 
-    console.log(req.body.name)
+    const {name}= req.body;
+    const validation = userModel.validate(req.body, {abortEarly:true})
+        if(validation.error){
+            res.send(validation.error.details)
+            return;
+        }
 
     
         try {
-            const validation = userModel.validate(req.body, {abortEarly:true})
-            if(validation.error){
-                res.send(validation.error.details)
-                return;
-            }
-            
-            
             await mongoClient.connect();
             const dbParticipants = mongoClient.db("apiuol");
             const participantsCollection = dbParticipants.collection("participants")
-            
-            const participants = participantsCollection.insertOne({ name: req.body, lastStatus: Date.now()});
+            const participant = await participantsCollection.findOne({name})
 
-            res.sendStatus(201);
+            if(participant){
+                res.sendStatus(409)
+            }else{
+                await participantsCollection.insertOne({ name, lastStatus: Date.now()});
+                await mongoClient.connect();
+                const dbMessages = mongoClient.db("apiuol");
+                const messagesCollection =  dbMessages.collection("messages")
+                const messages = await messagesCollection.insertOne({
+                    from: name, 
+                    to: 'Todos', 
+                    text: 'entra na sala...', 
+                    type: 'status',
+                    time: dayjs().format('HH:mm:ss')
+                });
 
+                res.sendStatus(201);
+
+            }
         } catch (error) {
-            
+            res.status(500).send(error)
         }
+
+        mongoClient.close()
     
 })
 
+
+app.post('/messages', async (req, res)=>{
+        const {user} = req.headers
+        const message = req.body
+
+        const validation = messageModel.validate(req.body, {abortEarly:true})
+        if(validation.error){
+            res.send(validation.error.details)
+            return;
+        }
+
+        try{
+            await mongoClient.connect();
+                const dbMessages = mongoClient.db("apiuol");
+                const messagesCollection =  dbMessages.collection("messages")
+                const messages = await messagesCollection.insertOne({
+                    from: user, 
+                    to: message.to, 
+                    text: message.text, 
+                    type: message.type,
+                    time: dayjs().format('HH:mm:ss')
+                });
+                res.status(201)
+        }catch{
+
+        }
+
+})
