@@ -2,6 +2,7 @@ import express, {json} from 'express';
 import cors from 'cors';
 import {MongoClient} from 'mongodb';
 import dotenv from 'dotenv';
+import joi from 'joi';
 dotenv.config();
 
 
@@ -17,6 +18,10 @@ let db;
 const mongoClient = new MongoClient(process.env.MONGO_URI);
 mongoClient.connect().then(()=>{
     db = mongoClient.db('apiuol')
+})
+
+const userModel = joi.object({
+    name: joi.string().required(),
 })
 
 
@@ -78,14 +83,19 @@ app.post('/participants', async (req, res)=>{
 
     console.log(req.body.name)
 
-    if(!req.body.name){
-        res.status(422).send('O campo usuario nao pode ser vazio')
-    }else{
+    
         try {
+            const validation = userModel.validate(req.body, {abortEarly:true})
+            if(validation.error){
+                res.send(validation.error.details)
+                return;
+            }
+            
             
             await mongoClient.connect();
             const dbParticipants = mongoClient.db("apiuol");
             const participantsCollection = dbParticipants.collection("participants")
+            
             const participants = participantsCollection.insertOne({ name: req.body, lastStatus: Date.now()});
 
             res.sendStatus(201);
@@ -93,6 +103,6 @@ app.post('/participants', async (req, res)=>{
         } catch (error) {
             
         }
-    }
+    
 })
 
