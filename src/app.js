@@ -11,11 +11,13 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+let db
+
 app.listen(5000, ()=>{
     console.log("Servidor rodando na porta 5000")
 });
 
-let db;
+
 const mongoClient = new MongoClient(process.env.MONGO_URI);
 mongoClient.connect().then(()=>{
     db = mongoClient.db('apiuol')
@@ -52,8 +54,9 @@ app.get('/participants', async (req, res) => {
 
 app.get('/messages', async (req, res)=>{
     const limit = req.query.limit;
-    const user  = req.headers.user;
+    const {user}  = req.headers;
     
+    console.log(user)
     
     try{
         await mongoClient.connect();
@@ -61,14 +64,20 @@ app.get('/messages', async (req, res)=>{
         const messagesCollection = dbMessages.collection("messages")
         const messages = await messagesCollection.find({}).toArray();
         
-        const filteredMessages = messages.filter((m)=> {
-            (m.type === "message" || m.type === "status"|| m.to === "Todos" || m.to === user || m.from === user);
-        });
+        console.log(messages)
     
+        
+
+        const filteredMessages = messages.filter(messages=>
+            messages.type === "message" || messages.to === user ||messages.type === "status" || messages.from === user
+        )
         if(!limit){
             res.send(filteredMessages)
+
         }else{
-            res.send(filteredMessages.filter(- limit))
+            
+            const lastMessage = filteredMessages.slice(-limit)
+            res.send(lastMessage)
         }
             
         }catch(error){
