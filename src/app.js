@@ -15,7 +15,11 @@ app.use(express.json());
 
 let db
 
+<<<<<<< HEAD
 app.listen(5000, () => {
+=======
+app.listen(5000, ()=>{
+>>>>>>> aef9716c19365de3e917068ec1f3d4e891cae4f0
     console.log("Servidor rodando na porta 5000")
 });
 
@@ -56,15 +60,24 @@ app.get('/participants', async (req, res) => {
 
 app.get('/messages', async (req, res) => {
     const limit = req.query.limit;
+<<<<<<< HEAD
     const { user } = req.headers;
 
     console.log(user)
 
     try {
+=======
+    const {user}  = req.headers;
+    
+    console.log(user)
+    
+    try{
+>>>>>>> aef9716c19365de3e917068ec1f3d4e891cae4f0
         await mongoClient.connect();
         const dbMessages = mongoClient.db("apiuol");
         const messagesCollection = dbMessages.collection("messages")
         const messages = await messagesCollection.find({}).toArray();
+<<<<<<< HEAD
 
         console.log(messages)
 
@@ -80,6 +93,27 @@ app.get('/messages', async (req, res) => {
 
             const lastMessage = filteredMessages.slice(-limit)
             res.send(lastMessage)
+=======
+        
+        console.log(messages)
+    
+        
+
+        const filteredMessages = messages.filter(messages=>
+            messages.type === "message" || messages.to === user ||messages.type === "status" || messages.from === user
+        )
+        if(!limit){
+            res.send(filteredMessages)
+
+        }else{
+            
+            const lastMessage = filteredMessages.slice(-limit)
+            res.send(lastMessage)
+        }
+            
+        }catch(error){
+            res.status(500).send(error)
+>>>>>>> aef9716c19365de3e917068ec1f3d4e891cae4f0
         }
 
     } catch (error) {
